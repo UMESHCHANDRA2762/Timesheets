@@ -1,0 +1,36 @@
+/* --- Default styles for larger screens --- */
+.map-view {
+  height: 80vh; /* Default height for large screens */
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.timesheet-list {
+  max-height: 300px; /* Give the timesheet a max height */
+  overflow-y: auto; /* Allow scrolling */
+}
+
+.tracking-title {
+  font-size: 2rem;
+}
+
+/* --- Media query for smaller screens (tablets and phones) --- */
+@media (max-width: 991.98px) {
+  .tracking-title {
+    font-size: 1.5rem; /* Smaller title on mobile */
+  }
+
+  .map-view {
+    height: 50vh; /* Reduced map height on smaller screens */
+  }
+
+  .details-col {
+    margin-top: 1.5rem; /* Add space between map and details when stacked */
+  }
+}
+
+/* Leaflet driver icon should not have a border */
+.driver-icon {
+  background: transparent;
+  border: none;
+}
