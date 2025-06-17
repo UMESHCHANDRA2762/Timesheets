@@ -1,0 +1,147 @@
+/* --- Global Page Style --- */
+.tracking-page-container {
+  background-color: #f4f7f9; /* A softer, modern background color */
+  min-height: 100vh;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+.tracking-header h1 {
+  font-weight: 700;
+  color: #2c3e50; /* A darker, less harsh text color */
+  margin-bottom: 2rem;
+}
+
+/* --- Card Base Style for Consistency --- */
+.info-card {
+  border: none;
+  border-radius: 1rem; /* Softer, more modern corners */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); /* A more subtle, diffused shadow */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.info-card .card-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e9ecef;
+  border-radius: 1rem 1rem 0 0 !important;
+  font-weight: 600;
+  color: #34495e;
+}
+
+.info-card .card-body {
+  flex-grow: 1; /* Allows body to fill available space */
+}
+
+/* --- Map Column & "Iframe" Style --- */
+.map-col {
+  height: 80vh; /* Set a fixed height for the column */
+}
+
+.map-view {
+  height: 100%; /* Map fills the entire column height */
+  width: 100%;
+  border-radius: 1rem; /* Match the card's border radius */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* --- Map Overlay Buttons --- */
+.recenter-btn,
+.style-toggle-btn {
+  position: absolute;
+  z-index: 1000; /* Ensure buttons are on top */
+  top: 1rem;
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid #dee2e6 !important;
+  border-radius: 50% !important;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease-in-out;
+}
+
+.recenter-btn:hover,
+.style-toggle-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.recenter-btn {
+  right: 65px; /* Adjusted for spacing */
+}
+
+.style-toggle-btn {
+  right: 15px;
+}
+
+/* --- Details Column Styles --- */
+.details-col {
+  height: 80vh; /* Match the map column height */
+}
+
+.timesheet-list {
+  max-height: 450px; /* Give the timesheet more space */
+  overflow-y: auto; /* Allow scrolling */
+}
+
+.timesheet-list .list-group-item {
+  border-left: none;
+  border-right: none;
+}
+
+/* --- Journey Completed Section (NEW) --- */
+/* This section appears inside the log card when the trip is over */
+.journey-completed-section {
+  text-align: center;
+  padding: 2rem 1rem;
+  background-color: #e8f5e9; /* A light, success green */
+  border-radius: 0.5rem;
+  margin: 1rem;
+}
+
+.journey-completed-section .icon {
+  color: #28a745;
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.journey-completed-section .total-stat {
+  font-size: 1.1rem;
+  color: #333;
+  margin-bottom: 1.5rem;
+}
+
+.btn-primary-custom {
+  background-color: #0d6efd;
+  border: none;
+  font-weight: bold;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+}
+
+/* --- Responsive Media Queries --- */
+@media (max-width: 991.98px) {
+  .tracking-page-container {
+    padding-top: 1rem;
+  }
+
+  .tracking-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .map-col,
+  .details-col {
+    height: auto; /* Let content define height on smaller screens */
+  }
+
+  .map-view {
+    min-height: 50vh; /* Ensure map is still usable */
+  }
+
+  .details-col {
+    margin-top: 1.5rem; /* Space between map and details when stacked */
+  }
+}
