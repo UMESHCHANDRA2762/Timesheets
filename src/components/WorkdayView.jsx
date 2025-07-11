@@ -1,17 +1,20 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, database } from "../firebase";
 import { ref, update, push, serverTimestamp, set } from "firebase/database";
-import { GoogleMap, useJsApiLoader, MarkerF, Circle, Polyline } from "@react-google-maps/api";
-import { Container, Card, Spinner, Alert, Button, Row, Col } from "react-bootstrap";
-import { GeoAltFill, CheckCircleFill, XCircleFill } from "react-bootstrap-icons";
-
-// --- API Keys & Constants ---
-const Maps_API_KEY = "AIzaSyBmlybkhtQxnipZkUjG2rnzFG39bEDKOgE"; // For Google Maps display
-const OPENCAGE_API_KEY = "fa506c460bc64fbd870fd0a8a88728b8"; // For Reverse Geocoding
-const OFFICE_LOCATION = { lat: 17.4355, lng: 78.4574 }; 
-const GEOFENCE_RADIUS_METERS = 2;
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import {
+  Container,
+  Card,
+  Alert,
+  Button,
+  Row,
+  Col,
+  Stack,
+} from "react-bootstrap";
+import { GeoAltFill, PersonCircle, DoorOpenFill, HourglassSplit } from "react-bootstrap-icons";
 
 // --- Helper to get date in YYYY-MM-DD format ---
 const getTodaysDateString = () => {
@@ -22,7 +25,13 @@ const getTodaysDateString = () => {
   return `${year}-${month}-${day}`;
 };
 
-// --- RESTORED: Helper for Reverse Geocoding using OpenCage ---
+// --- API Keys & Constants ---
+const OPENCAGE_API_KEY = "fa506c460bc64fbd870fd0a8a88728b8";
+const OFFICE_LOCATION = { lat: 17.4355, lng: 78.4574 };
+const GEOFENCE_RADIUS_METERS = 200;
+const ADDRESS_UPDATE_DISTANCE_METERS = 50;
+
+// --- Helper for Reverse Geocoding using OpenCage ---
 const getPlacename = async (lat, lng) => {
   const url = `https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lng}&key=${OPENCAGE_API_KEY}`;
   try {
@@ -36,6 +45,13 @@ const getPlacename = async (lat, lng) => {
   }
 };
 
+// --- Leaflet Icon Fix ---
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+});
 
 const WorkdayView = () => {
   const navigate = useNavigate();
@@ -44,82 +60,109 @@ const WorkdayView = () => {
   const [error, setError] = useState(null);
   const [isTracking, setIsTracking] = useState(false);
   const [canStartDay, setCanStartDay] = useState(false);
-  const [currentCoords, setCurrentCoords] = useState(null);
-  const [path, setPath] = useState([]);
-  const [checkInMessage, setCheckInMessage] = useState({ type: "", text: "" });
-  const [currentAddress, setCurrentAddress] = useState("");
-  const [addressLoading, setAddressLoading] = useState(false);
+  const [currentAddress, setCurrentAddress] = useState("Finding your location...");
 
   const passiveWatcherId = useRef(null);
   const watcherId = useRef(null);
-  const mapRef = useRef(null);
+  const mapContainer = useRef(null);
+  const map = useRef(null);
+  const userMarker = useRef(null);
+  const userPath = useRef(null);
+  const lastGeocodedPos = useRef(null);
+
   const today = getTodaysDateString();
-
-  // Load the Google Maps script (removed "geocoding" library)
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: Maps_API_KEY,
-    libraries: ["geometry"],
-  });
-
-  const mapOptions = useMemo(() => ({
-    disableDefaultUI: true,
-    clickableIcons: false,
-    zoomControl: true,
-  }), []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        setStatus("Ready to start your day.");
-      } else {
-        navigate("/login");
-      }
+      if (currentUser) setUser(currentUser);
+      else navigate("/login");
     });
     return () => unsubscribe();
   }, [navigate]);
 
+  // Effect to CREATE the map
   useEffect(() => {
-    if (isTracking || !user || !isLoaded) {
+    // FIX: Check if the container exists before creating the map.
+    if (user && !map.current && mapContainer.current) {
+      map.current = L.map(mapContainer.current, { zoomControl: false }).setView([OFFICE_LOCATION.lat, OFFICE_LOCATION.lng], 13);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      }).addTo(map.current);
+      L.control.zoom({ position: 'topright' }).addTo(map.current);
+      L.circle([OFFICE_LOCATION.lat, OFFICE_LOCATION.lng], {
+        color: '#0d6efd',
+        fillColor: '#0d6efd',
+        fillOpacity: 0.2,
+        radius: GEOFENCE_RADIUS_METERS,
+      }).addTo(map.current).bindPopup("Office Location");
+    }
+  }, [user]);
+
+  const handleAddressUpdate = (latitude, longitude) => {
+    const currentPos = L.latLng(latitude, longitude);
+    if (!lastGeocodedPos.current || currentPos.distanceTo(lastGeocodedPos.current) > ADDRESS_UPDATE_DISTANCE_METERS) {
+        lastGeocodedPos.current = currentPos;
+        getPlacename(latitude, longitude).then(address => {
+            setCurrentAddress(address);
+        });
+    }
+  };
+
+  // Passive location check (before tracking starts)
+  useEffect(() => {
+    if (isTracking || !user || !map.current) {
       if(passiveWatcherId.current) navigator.geolocation.clearWatch(passiveWatcherId.current);
       return;
     }
     setStatus("Verifying your location...");
     const onPassiveUpdate = (position) => {
       const { latitude, longitude } = position.coords;
-      const userPos = new window.google.maps.LatLng(latitude, longitude);
-      const officePos = new window.google.maps.LatLng(OFFICE_LOCATION.lat, OFFICE_LOCATION.lng);
-      const distance = window.google.maps.geometry.spherical.computeDistanceBetween(userPos, officePos);
-
+      handleAddressUpdate(latitude, longitude);
+      const userLatLng = L.latLng(latitude, longitude);
+      if (!userMarker.current) {
+        userMarker.current = L.marker(userLatLng).addTo(map.current).bindPopup("This is you!");
+      } else {
+        userMarker.current.setLatLng(userLatLng);
+      }
+      const officeLatLng = L.latLng(OFFICE_LOCATION.lat, OFFICE_LOCATION.lng);
+      map.current.fitBounds(L.latLngBounds(userLatLng, officeLatLng), { padding: [50, 50] });
+      const distance = Math.round(userLatLng.distanceTo(officeLatLng));
       if (distance <= GEOFENCE_RADIUS_METERS) {
         setCanStartDay(true);
-        setStatus("✅ You are at the office. You can now start your day!");
+        setStatus("✅ You are at the office. You can now Check-In!");
         if(passiveWatcherId.current) navigator.geolocation.clearWatch(passiveWatcherId.current);
       } else {
         setCanStartDay(false);
-        setStatus(`❌ You must be at the office to start. You are ~${Math.round(distance)} meters away.`);
+        setStatus(`❌ You must be at the office to Check-In. You are ~${distance} meters away.`);
       }
     };
-    passiveWatcherId.current = navigator.geolocation.watchPosition(onPassiveUpdate, () => setError("Could not get location."));
+    const onError = (err) => setError(`Could not get location: ${err.message}.`);
+    passiveWatcherId.current = navigator.geolocation.watchPosition(onPassiveUpdate, onError, { enableHighAccuracy: false });
     return () => { if (passiveWatcherId.current) navigator.geolocation.clearWatch(passiveWatcherId.current); };
-  }, [isTracking, user, isLoaded]);
+  }, [isTracking, user, map.current]);
 
+  // ACTIVE location tracking (after "Check-In" is clicked)
   useEffect(() => {
-    if (!isTracking || !user || !isLoaded) return;
+    if (!isTracking || !map.current || !user) return;
     const onPositionUpdate = (position) => {
       const { latitude, longitude } = position.coords;
+      handleAddressUpdate(latitude, longitude);
       const newCoords = { lat: latitude, lng: longitude };
-      setCurrentCoords(newCoords);
-      setPath(prevPath => [...prevPath, newCoords]);
-      
       const employeeRef = ref(database, `employees/${user.uid}`);
       const dailyHistoryRef = ref(database, `employees/${user.uid}/dailyData/${today}/locationHistory`);
       update(employeeRef, { currentLocation: { ...newCoords, timestamp: serverTimestamp() }, isTrackingLive: true });
       push(dailyHistoryRef, newCoords);
+      userMarker.current.setLatLng([latitude, longitude]);
+      map.current.panTo([latitude, longitude]);
+      if (!userPath.current) {
+        userPath.current = L.polyline([], { color: '#FF0000', weight: 4 }).addTo(map.current);
+      }
+      userPath.current.addLatLng([latitude, longitude]);
     };
-    watcherId.current = navigator.geolocation.watchPosition(onPositionUpdate, () => setError("Location tracking error."), { enableHighAccuracy: true });
+    const onError = (err) => setError(`Location Error: ${err.message}`);
+    watcherId.current = navigator.geolocation.watchPosition(onPositionUpdate, onError, { enableHighAccuracy: true });
     return () => { if (watcherId.current) navigator.geolocation.clearWatch(watcherId.current); };
-  }, [isTracking, user, today, isLoaded]);
+  }, [isTracking, map.current, user, today]);
 
   const startTracking = () => {
     if (!user || !canStartDay) return;
@@ -128,116 +171,66 @@ const WorkdayView = () => {
     set(dailyDataRef, { startTime: serverTimestamp(), locationHistory: null, checkIns: null, totalDistance: 0 });
     update(employeeRef, { email: user.email, name: user.email.split("@")[0] });
     setIsTracking(true);
-  };
-  
-  const handleCheckIn = () => {
-    if (!isWithinGeofence) return;
-    const checkInRef = ref(database, `employees/${user.uid}/dailyData/${today}/checkIns`);
-    push(checkInRef, {
-      timestamp: serverTimestamp(),
-      location: OFFICE_LOCATION,
-    })
-    .then(() => setCheckInMessage({ type: "success", text: "Checked in successfully!" }))
-    .catch((err) => setCheckInMessage({ type: "danger", text: `Check-in failed: ${err.message}`}));
+    setStatus("Checked-In! Tracking is now active.");
   };
 
-  // --- UPDATED: Get Address handler now uses OpenCage ---
-  const handleGetAddress = async () => {
-    if (!currentCoords) {
-      setError("Location not yet available.");
-      return;
-    }
-    setAddressLoading(true);
-    setCurrentAddress("");
-    const address = await getPlacename(currentCoords.lat, currentCoords.lng);
-    setCurrentAddress(address);
-    setAddressLoading(false);
+  const simpleLogout = () => {
+      signOut(auth).then(() => navigate("/login"));
   };
 
   const stopTrackingAndLogout = () => {
-    if(isLoaded && path.length > 1) {
-      let totalDist = 0;
-      for (let i = 1; i < path.length; i++) {
-        totalDist += window.google.maps.geometry.spherical.computeDistanceBetween(
-          new window.google.maps.LatLng(path[i-1]),
-          new window.google.maps.LatLng(path[i])
-        );
-      }
-      const dailyDataRef = ref(database, `employees/${user.uid}/dailyData/${today}`);
-      update(dailyDataRef, { totalDistance: totalDist });
-    }
     setIsTracking(false);
     if (watcherId.current) navigator.geolocation.clearWatch(watcherId.current);
     if (user) update(ref(database, `employees/${user.uid}`), { isTrackingLive: false });
     signOut(auth).then(() => navigate("/login"));
   };
-  
-  const isWithinGeofence = useMemo(() => {
-    if (!currentCoords || !isLoaded) return false;
-    const distance = window.google.maps.geometry.spherical.computeDistanceBetween(
-        new window.google.maps.LatLng(currentCoords),
-        new window.google.maps.LatLng(OFFICE_LOCATION)
-    );
-    return distance <= GEOFENCE_RADIUS_METERS;
-  }, [currentCoords, isLoaded]);
-
-  if (loadError) return <div>Error loading maps</div>;
-  if (!isLoaded) return <div className="text-center p-5"><Spinner animation="border" /></div>;
 
   return (
-    <Container fluid className="p-3 p-md-4" style={{ backgroundColor: "#f0f2f5" }}>
-      <Row className="justify-content-center">
-        <Col xl={8} lg={10}>
-          <Card className="shadow-sm">
-            <Card.Header as="h5" className="text-center">Employee Workday Panel</Card.Header>
-            <Card.Body className="p-4">
-              <Card.Title className="text-center">Welcome, {user ? user.email.split("@")[0] : "Employee"}!</Card.Title>
-              {!isTracking && <Alert variant={canStartDay ? "success" : "info"} className="text-center">{status}</Alert>}
-              {error && <Alert variant="danger">{error}</Alert>}
-              {isTracking ? (
-                <>
-                  <div style={{ height: "40vh", width: "100%" }}>
-                    <GoogleMap
-                        mapContainerStyle={{height: "100%", width: "100%", borderRadius: "0.5rem"}}
-                        center={currentCoords || OFFICE_LOCATION}
-                        zoom={17}
-                        options={mapOptions}
-                        onLoad={map => mapRef.current = map}
-                    >
-                        {currentCoords && <MarkerF position={currentCoords} />}
-                        <Circle center={OFFICE_LOCATION} radius={GEOFENCE_RADIUS_METERS} options={{strokeColor: '#0d6efd', strokeOpacity: 0.8, strokeWeight: 2, fillColor: '#0d6efd', fillOpacity: 0.2}}/>
-                        <Polyline path={path} options={{strokeColor: '#FF0000', strokeWeight: 4}}/>
-                    </GoogleMap>
-                  </div>
-                  <Row className="mt-4">
-                    <Col md={6} className="mb-3">
-                      <Card><Card.Body>
-                        <Card.Title>Location-Based Check-In</Card.Title>
-                        <Alert variant={isWithinGeofence ? "success" : "warning"} className="d-flex align-items-center">
-                          {isWithinGeofence ? <CheckCircleFill className="me-2" /> : <XCircleFill className="me-2" />}
-                          {isWithinGeofence ? "You are in the zone." : "You are outside the zone."}
-                        </Alert>
-                        <Button onClick={handleCheckIn} disabled={!isWithinGeofence} className="w-100">Check-In at Office</Button>
-                        {checkInMessage.text && <Alert variant={checkInMessage.type} className="mt-3">{checkInMessage.text}</Alert>}
-                      </Card.Body></Card>
-                    </Col>
-                    <Col md={6} className="mb-3">
-                       <Card><Card.Body>
-                         <Card.Title>Reverse Geocoding</Card.Title>
-                          <Button onClick={handleGetAddress} disabled={addressLoading || !currentCoords} className="w-100"><GeoAltFill className="me-2"/>{addressLoading ? 'Fetching...' : 'Get My Current Address'}</Button>
-                          {currentAddress && <Alert variant="info" className="mt-3">{currentAddress}</Alert>}
-                       </Card.Body></Card>
-                    </Col>
-                  </Row>
-                  <Button variant="danger" size="lg" className="w-100 mt-3" onClick={stopTrackingAndLogout}>End Day & Log Out</Button>
-                </>
-              ) : (
-                <div className="text-center">
-                  <Button variant="primary" size="lg" className="w-100" onClick={startTracking} disabled={!canStartDay}>Start Day</Button>
-                </div>
-              )}
-            </Card.Body>
+    <Container fluid className="p-3 p-md-4" style={{ backgroundColor: "#f8f9fa" }}>
+      <Row>
+        <Col md={7} lg={8} className="mb-3 mb-md-0">
+          <Card className="shadow-sm" style={{ height: "calc(100vh - 2rem)"}}>
+            <div id="map" ref={mapContainer} style={{ height: "100%", borderRadius: "0.375rem" }} />
           </Card>
+        </Col>
+        <Col md={5} lg={4}>
+          <Stack gap={3}>
+            <Card className="shadow-sm">
+              <Card.Body className="d-flex flex-column align-items-center text-center">
+                <PersonCircle size={60} className="text-secondary mb-2" />
+                <Card.Title className="mb-0">Welcome, {user ? user.email.split("@")[0] : "Employee"}!</Card.Title>
+                <Card.Text className="text-muted">{user?.email}</Card.Text>
+              </Card.Body>
+            </Card>
+            <Card className="shadow-sm">
+              <Card.Body>
+                <Card.Title><HourglassSplit className="me-2"/>Status</Card.Title>
+                 <Alert variant={isTracking ? "primary" : (canStartDay ? "success" : "info")} className="text-center mb-0">
+                    {status}
+                 </Alert>
+                 {error && <Alert variant="danger" className="mt-2">{error}</Alert>}
+              </Card.Body>
+            </Card>
+            <Card className="shadow-sm">
+              <Card.Body>
+                <Card.Title><GeoAltFill className="me-2"/>Current Address</Card.Title>
+                <Card.Text className="text-muted">{currentAddress}</Card.Text>
+              </Card.Body>
+            </Card>
+            <Card className="shadow-sm">
+                <Card.Body>
+                    <Card.Title>Actions</Card.Title>
+                    {isTracking ? (
+                         <Button variant="danger" size="lg" className="w-100" onClick={stopTrackingAndLogout}>End Day & Log Out</Button>
+                    ) : (
+                        <Stack gap={2}>
+                            <Button variant="primary" size="lg" onClick={startTracking} disabled={!canStartDay}>Check-In</Button>
+                            <Button variant="outline-secondary" onClick={simpleLogout}><DoorOpenFill className="me-2"/>Log Out</Button>
+                        </Stack>
+                    )}
+                </Card.Body>
+            </Card>
+          </Stack>
         </Col>
       </Row>
     </Container>
