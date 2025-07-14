@@ -1,0 +1,63 @@
+/* Global body background */
+body {
+  background-color: #f0f2f5;
+}
+
+/* Container background */
+.login-container {
+  background: radial-gradient(circle, rgba(247,248,250,1) 0%, rgba(235,237,240,1) 100%);
+  min-height: 100vh;
+}
+
+/* Card styling */
+.login-card {
+  border: none;
+  border-radius: 20px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  width: 100%;
+  max-width: 420px;
+}
+
+/* Input styling */
+.form-control-custom {
+  background-color: #f0f2f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.form-control-custom:focus {
+  background-color: #fff;
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+/* Button styling */
+.btn-login {
+  border-radius: 12px;
+  padding: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s ease-in-out;
+  background-color: #007aff;
+  border-color: #007aff;
+}
+
+.btn-login:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2);
+}
+
+/* Forgot password link */
+.forgot-password-link {
+  font-size: 0.85rem;
+  color: #6c757d;
+  text-decoration: none;
+}
+
+.forgot-password-link:hover {
+  color: #007aff;
+}

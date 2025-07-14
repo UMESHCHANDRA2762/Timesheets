@@ -1,7 +1,7 @@
-// src/App.js
+
 
 import React, { useState, useEffect } from "react";
-// --- FIXED: 'useNavigate' has been added to this import line ---
+
 import {
   BrowserRouter as Router,
   Routes,
