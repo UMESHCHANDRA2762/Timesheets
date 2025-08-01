@@ -1,68 +1,139 @@
-/* Dashboard.css */
-
 /* --- Base & Background --- */
 .dashboard-background {
-  background-color: #f0f2f5;
+  background-color: #fff;
   min-height: 100vh;
   padding: 3rem 1rem;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
+  color: #000;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.dashboard-background.dark {
+  background: #000;
+  color: #fff;
 }
 
 .dashboard-container {
   max-width: 900px;
 }
 
-/* --- Dashboard Header --- */
-.dashboard-header {
-  margin-bottom: 2.5rem;
+/* --- Stats Bar --- */
+.stats-bar-glass {
+  background: #fff;
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  padding: 1rem 2rem;
+  color: #000;
 }
+.dark .stats-bar-glass {
+  background: #111;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(255,255,255,0.03);
+}
+.stat-title { font-size: 1rem; color: inherit; }
+.stat-num { font-size: 1.7rem; font-weight: 600; }
+.stat-badge.live,
+.stat-badge.offline {
+  background: #000;
+  color: #fff;
+  border-radius: 2rem;
+  padding: 0.35rem 1.2rem;
+  font-weight: 600;
+}
+.dark .stat-badge.live,
+.dark .stat-badge.offline {
+  background: #fff;
+  color: #000;
+}
+.stat-sync { color: #777; font-size: 0.8rem; }
 
-.dashboard-header h1 {
-  font-size: 2.75rem;
-  color: #1d1d1f;
-}
+/* --- Dashboard Header --- */
+.dashboard-header { margin-bottom: 2.5rem; position: relative; }
+.dashboard-header h1 { font-size: 2.75rem; color: inherit; }
 
 /* --- Apple-Inspired Card --- */
 .apple-card {
-  border-radius: 1.5rem !important; /* Increased border radius */
-  border: none !important;
-  background-color: rgba(255, 255, 255, 0.8) !important;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.12) !important;
-  overflow: hidden; /* Ensures child elements conform to border-radius */
+  border-radius: 1.5rem !important;
+  border: 1px solid #000 !important;
+  background-color: #fff !important;
+  box-shadow: 0 1rem 3rem rgba(0,0,0,.10) !important;
+  overflow: hidden;
+  color: #000;
+}
+.dark .apple-card {
+  background: #111 !important;
+  color: #fff;
+  border: 1px solid #fff !important;
 }
 
 /* --- Glassmorphism Card Header --- */
 .card-header-glass {
-  background-color: rgba(255, 255, 255, 0.6) !important;
+  background-color: #fff !important;
   padding: 1.5rem !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-bottom: 1px solid #000 !important;
+  display: flex;
+  gap: 1.2rem;
+  color: #000;
+}
+.dark .card-header-glass {
+  background: #000 !important;
+  border-bottom: 1px solid #fff !important;
+  color: #fff;
 }
 
-.card-header-glass h3 {
-  font-weight: 600;
-  color: #1d1d1f;
+/* --- Dark Mode Toggle --- */
+.darkmode-toggle {
+  position: absolute;
+  right: 1.5rem; top: 1rem;
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 50%;
+  width: 2.5rem; height: 2.5rem;
+  font-size: 1.25rem;
+  color: #000;
+  box-shadow: none;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(.4,1.1,.8,1);
+}
+.dark .darkmode-toggle {
+  background: #000;
+  color: #fff;
+  border: 1px solid #fff;
+}
+.darkmode-toggle svg {
+  color: inherit;
 }
 
 /* --- Search Bar --- */
-.search-bar {
-  max-width: 300px;
-}
+.search-bar { max-width: 300px; }
 .search-bar .form-control {
   border-radius: 0.75rem !important;
-  border: none !important;
-  background-color: rgba(228, 228, 229, 0.7) !important;
-  transition: background-color 0.2s ease-in-out;
+  border: 1px solid #000 !important;
+  background-color: #fff !important;
+  color: #000;
+  transition: background-color 0.2s ease;
 }
 .search-bar .form-control:focus {
   background-color: #fff !important;
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.5) !important;
+  box-shadow: 0 0 0 2px #000 !important;
+  color: #000;
 }
 .search-bar .input-group-text {
   background: transparent;
   border: none;
+  color: #000;
+}
+.dark .search-bar .form-control {
+  background-color: #111 !important;
+  border: 1px solid #fff !important;
+  color: #fff;
+}
+.dark .search-bar .form-control:focus {
+  background-color: #000 !important;
+  color: #fff;
+  box-shadow: 0 0 0 2px #fff !important;
+}
+.dark .search-bar .input-group-text {
+  color: #fff;
 }
 
 /* --- Employee List Item --- */
@@ -71,17 +142,18 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 1.5rem !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
-  transition: background-color 0.2s ease;
-}
-
-.employee-item:last-child {
-  border-bottom: none !important;
-}
-
-.employee-item:hover {
-  background-color: rgba(0, 122, 255, 0.05) !important;
+  border-bottom: 1px solid #000 !important;
+  background: transparent !important;
+  transition: background-color 0.2s;
   cursor: pointer;
+  color: inherit;
+}
+.employee-item:last-child { border-bottom: none !important; }
+.employee-item:hover {
+  background-color: #ececec !important;
+}
+.dark .employee-item:hover {
+  background-color: #181818 !important;
 }
 
 /* --- Status Badge --- */
@@ -92,6 +164,41 @@
   padding: 0.5rem 0.85rem;
   border-radius: 2rem;
   font-weight: 600;
+  background: #000;
+  color: #fff;
+}
+.employee-role.badge.bg-info,
+.badge.bg-info,
+.badge {
+  background: #fff !important;
+  color: #000 !important;
+  border: 1px solid #000 !important;
+  font-weight: 500;
+  margin-left: 0.5rem;
+}
+.dark .status-badge {
+  background: #fff; color: #000;
+}
+.dark .employee-role.badge.bg-info,
+.dark .badge.bg-info,
+.dark .badge {
+  background: #000 !important;
+  color: #fff !important;
+  border: 1px solid #fff !important;
+}
+
+/* --- Profile Modal --- */
+.profile-modal-glass .modal-content {
+  background: #fff;
+  border-radius: 2rem;
+  box-shadow: 0 1rem 3rem rgba(0,0,0,.15);
+  border: 1px solid #000;
+  color: #000;
+}
+.dark .profile-modal-glass .modal-content {
+  background: #000;
+  color: #fff;
+  border: 1px solid #fff;
 }
 
 /* --- Responsive Design --- */
@@ -109,25 +216,11 @@
     width: 100%;
   }
 }
-
 @media (max-width: 576px) {
-  .dashboard-background {
-    padding: 1.5rem 0.5rem;
-  }
-  .dashboard-header h1 {
-    font-size: 2rem;
-  }
-  .apple-card {
-    border-radius: 1rem !important;
-  }
-  .employee-item {
-    padding: 1rem !important;
-  }
-  .employee-item h5 {
-    font-size: 1rem;
-  }
-  .employee-item .person-circle {
-    font-size: 32px !important;
-    margin-right: 1rem !important;
-  }
+  .dashboard-background { padding: 1.5rem 0.5rem; }
+  .dashboard-header h1 { font-size: 2rem; }
+  .apple-card { border-radius: 1rem !important; }
+  .employee-item { padding: 1rem !important; }
+  .employee-item h5 { font-size: 1rem; }
 }
+

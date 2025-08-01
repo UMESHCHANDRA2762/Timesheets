@@ -54,6 +54,17 @@ const Login = () => {
     }
   };
 
+  // DEMO CREDENTIALS BUTTON HANDLERS
+  const fillAdmin = () => {
+    setEmail("hr@gmail.com");
+    setPassword("hr123456");
+  };
+
+  const fillUser = () => {
+    setEmail("user1@gmail.com");
+    setPassword("user123");
+  };
+
   return (
     <Container
       fluid
@@ -62,6 +73,7 @@ const Login = () => {
       <Card className="login-card">
         <Card.Body>
           <div className="text-center mb-4">
+            {/* SVG unchanged */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="48"
@@ -75,6 +87,26 @@ const Login = () => {
             </svg>
             <h2 className="fw-bold">Welcome Back</h2>
             <p className="text-muted">Sign in to access your dashboard.</p>
+          </div>
+
+          {/* DEMO: TEST CREDENTIAL BUTTONS */}
+          <div className="mb-3 d-flex justify-content-between">
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={fillAdmin}
+              disabled={loading}
+            >
+              Use Admin Test
+            </Button>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={fillUser}
+              disabled={loading}
+            >
+              Use Employee Test
+            </Button>
           </div>
 
           <Form onSubmit={handleLogin}>
